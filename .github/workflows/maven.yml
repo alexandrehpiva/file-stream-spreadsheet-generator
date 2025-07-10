@@ -72,7 +72,7 @@ jobs:
       run: ./mvnw jacoco:report
       
     - name: Verificar limites de cobertura
-      run: ./mvnw jacoco:check
+      run: ./mvnw jacoco:check@coverage-check
       
     - name: Upload relatório de cobertura para Codecov
       uses: codecov/codecov-action@v4
