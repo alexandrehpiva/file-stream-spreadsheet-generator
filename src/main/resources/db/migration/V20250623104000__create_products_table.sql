@@ -1,6 +1,6 @@
 -- Migração para criar tabela products diretamente em inglês
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
