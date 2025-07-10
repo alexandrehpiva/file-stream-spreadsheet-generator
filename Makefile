@@ -64,7 +64,7 @@ test-all: ## Executar todos os testes
 
 test-all-coverage: ## Executar todos os testes com relatório de cobertura
 	@echo "🧪 Executando todos os testes com cobertura..."
-	./mvnw clean test jacoco:report
+	./mvnw clean test jacoco:report -Dlogging.level.root=WARN -Dlogging.level.com.filestreamer=WARN
 	@echo "📊 Relatório de cobertura gerado em: target/site/jacoco/index.html"
 	@echo "🌐 Para visualizar o relatório, abra o arquivo acima no seu navegador ou execute 'make coverage-open'"
 
