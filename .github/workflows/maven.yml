@@ -18,6 +18,10 @@ jobs:
   test:
     name: Tests & Quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     services:
       postgres:
@@ -96,6 +100,10 @@ jobs:
     name: Build & Package
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     steps:
     - name: Checkout código
@@ -131,6 +139,12 @@ jobs:
         echo "jar-file=${JAR_FILE}" >> $GITHUB_OUTPUT
         echo "jar-size=$(stat -c%s ${JAR_FILE} | numfmt --to=iec)" >> $GITHUB_OUTPUT
         
+    - name: Obter versão do Maven
+      id: maven-version
+      run: |
+        MAVEN_VERSION=$(./mvnw -version | head -1)
+        echo "maven-version=${MAVEN_VERSION}" >> $GITHUB_OUTPUT
+        
     - name: Comentar PR com info do build
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
@@ -145,7 +159,7 @@ jobs:
             📦 **JAR gerado**: \`${{ steps.jar-info.outputs.jar-file }}\`
             📏 **Tamanho**: ${{ steps.jar-info.outputs.jar-size }}
             ☕ **Java**: ${{ env.JAVA_VERSION }}
-            🔧 **Maven**: $(./mvnw -version | head -1)
+            🔧 **Maven**: ${{ steps.maven-version.outputs.maven-version }}
             
             ✅ Todos os testes passaram e limites de cobertura foram respeitados.`
           })
@@ -155,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout código
