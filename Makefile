@@ -71,7 +71,7 @@ test-all-coverage: ## Executar todos os testes com relatório de cobertura
 test-coverage-check: ## Executar testes e verificar limites mínimos de cobertura  
 	@echo "🧪 Executando testes e verificando limites de cobertura..."
 	@echo "⚡ Limites configurados: 80% instruções, 70% branches"
-	./mvnw clean test
+	./mvnw clean test jacoco:check@coverage-check
 
 # Build e empacotamento
 build: ## Fazer build da aplicação
