@@ -1,5 +1,6 @@
 package com.filestreamer.spreadsheetgenerator.service.export;
 
+import com.filestreamer.spreadsheetgenerator.util.S3PresignedUrlUtil;
 import com.opencsv.CSVWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,11 @@ public class GenericS3StreamExporter implements StreamExporter {
     private String secretAccessKey;
     
     private S3Client s3Client;
+    private final S3PresignedUrlUtil s3PresignedUrlUtil;
+    
+    public GenericS3StreamExporter(S3PresignedUrlUtil s3PresignedUrlUtil) {
+        this.s3PresignedUrlUtil = s3PresignedUrlUtil;
+    }
     
     private S3Client getS3Client() {
         if (s3Client == null) {
@@ -131,8 +137,22 @@ public class GenericS3StreamExporter implements StreamExporter {
                 
                 String fileUrl = generateFileUrl(s3Key);
                 
-                return new ExportResult(exportConfig.getFileName(), s3Key, fileUrl, totalExported.get(), 
-                                      fileSize, executionTime, getType());
+                // Gerar URL pré-assinada
+                String presignedUrl = null;
+                try {
+                    if (s3PresignedUrlUtil.isConfigured()) {
+                        presignedUrl = s3PresignedUrlUtil.generatePresignedDownloadUrl(s3Key);
+                        logger.info("URL pré-assinada gerada com sucesso para s3://{}/{}", bucketName, s3Key);
+                    } else {
+                        logger.warn("S3PresignedUrlUtil não configurado, URL pré-assinada não será gerada");
+                    }
+                } catch (Exception e) {
+                    logger.error("Erro ao gerar URL pré-assinada para s3://{}/{}: {}", bucketName, s3Key, e.getMessage(), e);
+                    // Continua sem a URL pré-assinada em caso de erro
+                }
+                
+                return new ExportResult(exportConfig.getFileName(), s3Key, fileUrl, presignedUrl, 
+                                      totalExported.get(), fileSize, executionTime, getType());
             }
             
         } catch (Exception e) {

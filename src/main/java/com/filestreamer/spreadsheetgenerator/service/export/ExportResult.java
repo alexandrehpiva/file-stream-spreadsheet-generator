@@ -10,6 +10,7 @@ public class ExportResult {
     private final String fileName;
     private final String filePath;
     private final String fileUrl;
+    private final String presignedUrl; // Nova URL pré-assinada
     private final long totalRecords;
     private final long fileSizeBytes;
     private final long executionTimeMs;
@@ -18,13 +19,14 @@ public class ExportResult {
     private final boolean success;
     private final String errorMessage;
     
-    // Construtor para sucesso
-    public ExportResult(String fileName, String filePath, String fileUrl, 
+    // Construtor para sucesso (com URL pré-assinada)
+    public ExportResult(String fileName, String filePath, String fileUrl, String presignedUrl,
                        long totalRecords, long fileSizeBytes, long executionTimeMs, 
                        ExporterType exporterType) {
         this.fileName = fileName;
         this.filePath = filePath;
         this.fileUrl = fileUrl;
+        this.presignedUrl = presignedUrl;
         this.totalRecords = totalRecords;
         this.fileSizeBytes = fileSizeBytes;
         this.executionTimeMs = executionTimeMs;
@@ -34,11 +36,19 @@ public class ExportResult {
         this.errorMessage = null;
     }
     
+    // Construtor para sucesso (sem URL pré-assinada - para compatibilidade)
+    public ExportResult(String fileName, String filePath, String fileUrl, 
+                       long totalRecords, long fileSizeBytes, long executionTimeMs, 
+                       ExporterType exporterType) {
+        this(fileName, filePath, fileUrl, null, totalRecords, fileSizeBytes, executionTimeMs, exporterType);
+    }
+    
     // Construtor para erro
     public ExportResult(ExporterType exporterType, String errorMessage) {
         this.fileName = null;
         this.filePath = null;
         this.fileUrl = null;
+        this.presignedUrl = null;
         this.totalRecords = 0;
         this.fileSizeBytes = 0;
         this.executionTimeMs = 0;
@@ -52,6 +62,7 @@ public class ExportResult {
     public String getFileName() { return fileName; }
     public String getFilePath() { return filePath; }
     public String getFileUrl() { return fileUrl; }
+    public String getPresignedUrl() { return presignedUrl; }
     public long getTotalRecords() { return totalRecords; }
     public long getFileSizeBytes() { return fileSizeBytes; }
     public long getExecutionTimeMs() { return executionTimeMs; }
@@ -59,6 +70,13 @@ public class ExportResult {
     public LocalDateTime getTimestamp() { return timestamp; }
     public boolean isSuccess() { return success; }
     public String getErrorMessage() { return errorMessage; }
+    
+    /**
+     * Verifica se há URL pré-assinada disponível
+     */
+    public boolean hasPresignedUrl() {
+        return presignedUrl != null && !presignedUrl.trim().isEmpty();
+    }
     
     public String getFormattedFileSize() {
         if (fileSizeBytes < 1024) return fileSizeBytes + " B";
