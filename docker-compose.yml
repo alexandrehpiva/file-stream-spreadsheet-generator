@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: spreadsheet-generator-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spreadsheet_generator
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/db/migration:/docker-entrypoint-initdb.d
+    networks:
+      - spreadsheet-generator-network
+
+volumes:
+  postgres_data:
+
+networks:
+  spreadsheet-generator-network:
+    driver: bridge 
