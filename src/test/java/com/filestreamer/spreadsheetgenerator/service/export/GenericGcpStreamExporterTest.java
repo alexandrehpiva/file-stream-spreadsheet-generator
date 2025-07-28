@@ -1,12 +1,12 @@
 package com.filestreamer.spreadsheetgenerator.service.export;
 
+import com.filestreamer.spreadsheetgenerator.util.GcpPresignedUrlUtil;
 import com.google.cloud.storage.*;
 import com.google.cloud.WriteChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,7 +23,6 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class GenericGcpStreamExporterTest {
 
-    @InjectMocks
     private GenericGcpStreamExporter exporter;
 
     @Mock
@@ -31,9 +30,14 @@ class GenericGcpStreamExporterTest {
     
     @Mock
     private WriteChannel writeChannel;
+    
+    @Mock
+    private GcpPresignedUrlUtil gcpPresignedUrlUtil;
 
     @BeforeEach
     void setUp() throws IOException {
+        exporter = new GenericGcpStreamExporter(gcpPresignedUrlUtil);
+        
         ReflectionTestUtils.setField(exporter, "projectId", "test-project");
         ReflectionTestUtils.setField(exporter, "bucketName", "test-bucket");
 
@@ -49,6 +53,9 @@ class GenericGcpStreamExporterTest {
             // Inject the mocked storage client
             ReflectionTestUtils.setField(exporter, "storage", storage);
         }
+        
+        // Configurar comportamento padrão do mock para evitar NullPointerException
+        when(gcpPresignedUrlUtil.isConfigured()).thenReturn(false);
         
         // Evita erro "no bytes written" no Java 24 ao escrever via Channels.newWriter
         when(writeChannel.write(any(java.nio.ByteBuffer.class))).thenAnswer(invocation -> {

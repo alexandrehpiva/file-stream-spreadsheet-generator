@@ -1,5 +1,6 @@
 package com.filestreamer.spreadsheetgenerator.service.export;
 
+import com.filestreamer.spreadsheetgenerator.util.GcpPresignedUrlUtil;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
@@ -35,6 +36,11 @@ public class GenericGcpStreamExporter implements StreamExporter {
     private String bucketName;
     
     private Storage storage;
+    private final GcpPresignedUrlUtil gcpPresignedUrlUtil;
+    
+    public GenericGcpStreamExporter(GcpPresignedUrlUtil gcpPresignedUrlUtil) {
+        this.gcpPresignedUrlUtil = gcpPresignedUrlUtil;
+    }
     
     private Storage getStorage() throws IOException {
         if (storage == null) {
@@ -124,8 +130,22 @@ public class GenericGcpStreamExporter implements StreamExporter {
             
             String fileUrl = generateFileUrl(objectName);
             
-            return new ExportResult(exportConfig.getFileName(), objectName, fileUrl, totalExported.get(), 
-                                  fileSize, executionTime, getType());
+            // Gerar URL pré-assinada
+            String presignedUrl = null;
+            try {
+                if (gcpPresignedUrlUtil.isConfigured()) {
+                    presignedUrl = gcpPresignedUrlUtil.generatePresignedDownloadUrl(objectName);
+                    logger.info("URL pré-assinada gerada com sucesso para gs://{}/{}", bucketName, objectName);
+                } else {
+                    logger.warn("GcpPresignedUrlUtil não configurado, URL pré-assinada não será gerada");
+                }
+            } catch (Exception e) {
+                logger.error("Erro ao gerar URL pré-assinada para gs://{}/{}: {}", bucketName, objectName, e.getMessage(), e);
+                // Continua sem a URL pré-assinada em caso de erro
+            }
+            
+            return new ExportResult(exportConfig.getFileName(), objectName, fileUrl, presignedUrl,
+                                  totalExported.get(), fileSize, executionTime, getType());
             
         } catch (Exception e) {
             logger.error("Erro durante exportação streaming {}: {}", getType().getDisplayName(), e.getMessage(), e);

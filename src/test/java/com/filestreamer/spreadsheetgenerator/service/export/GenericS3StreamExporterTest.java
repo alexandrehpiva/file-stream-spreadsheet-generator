@@ -1,12 +1,14 @@
 package com.filestreamer.spreadsheetgenerator.service.export;
 
+import com.filestreamer.spreadsheetgenerator.util.S3PresignedUrlUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -20,22 +22,30 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class GenericS3StreamExporterTest {
 
-    @InjectMocks
     private GenericS3StreamExporter exporter;
 
     @Mock
     private S3Client s3Client;
+    
+    @Mock
+    private S3PresignedUrlUtil s3PresignedUrlUtil;
 
     @BeforeEach
     void setUp() {
+        exporter = new GenericS3StreamExporter(s3PresignedUrlUtil);
+        
         ReflectionTestUtils.setField(exporter, "bucketName", "test-bucket");
         ReflectionTestUtils.setField(exporter, "region", "us-east-1");
         ReflectionTestUtils.setField(exporter, "accessKeyId", "test-key");
         ReflectionTestUtils.setField(exporter, "secretAccessKey", "test-secret");
         // Inject the mocked client for most tests
         ReflectionTestUtils.setField(exporter, "s3Client", s3Client);
+        
+        // Configurar comportamento padrão do mock para evitar NullPointerException
+        when(s3PresignedUrlUtil.isConfigured()).thenReturn(false);
     }
 
     @Test
