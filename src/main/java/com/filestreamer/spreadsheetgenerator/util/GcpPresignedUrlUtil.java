@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
@@ -20,19 +21,22 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 public class GcpPresignedUrlUtil {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(GcpPresignedUrlUtil.class);
-    
+
     private static final long PRESIGNED_URL_DURATION_HOURS = 1;
-    
+
     @Value("${GCP_PROJECT_ID:}")
     private String projectId;
-    
+
     @Value("${GCP_STORAGE_BUCKET_NAME:}")
     private String bucketName;
-    
+
+    @Value("${GOOGLE_APPLICATION_CREDENTIALS:}")
+    private String credentialsPath;
+
     private Storage storage;
-    
+
     /**
      * Gera uma URL pré-assinada para download de arquivo do GCS
      *
@@ -44,34 +48,34 @@ public class GcpPresignedUrlUtil {
         if (!isConfigured()) {
             throw new IllegalStateException("Credenciais GCP não configuradas");
         }
-        
+
         try {
             Storage storage = getStorage();
-            
+
             BlobId blobId = BlobId.of(bucketName, objectName);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
-            
+
             URL presignedUrl = storage.signUrl(
-                blobInfo,
-                PRESIGNED_URL_DURATION_HOURS,
-                TimeUnit.HOURS,
-                Storage.SignUrlOption.httpMethod(HttpMethod.GET)
+                    blobInfo,
+                    PRESIGNED_URL_DURATION_HOURS,
+                    TimeUnit.HOURS,
+                    Storage.SignUrlOption.httpMethod(HttpMethod.GET)
             );
-            
+
             String presignedUrlString = presignedUrl.toString();
-            
-            logger.info("URL pré-assinada gerada para gs://{}/{} com expiração em {} hora(s)", 
-                       bucketName, objectName, PRESIGNED_URL_DURATION_HOURS);
-            
+
+            logger.info("URL pré-assinada gerada para gs://{}/{} com expiração em {} hora(s)",
+                    bucketName, objectName, PRESIGNED_URL_DURATION_HOURS);
+
             return presignedUrlString;
-            
+
         } catch (Exception e) {
-            logger.error("Erro ao gerar URL pré-assinada para gs://{}/{}: {}", 
-                        bucketName, objectName, e.getMessage(), e);
+            logger.error("Erro ao gerar URL pré-assinada para gs://{}/{}: {}",
+                    bucketName, objectName, e.getMessage(), e);
             throw new RuntimeException("Erro ao gerar URL pré-assinada do GCS", e);
         }
     }
-    
+
     /**
      * Verifica se as credenciais estão configuradas
      *
@@ -79,9 +83,10 @@ public class GcpPresignedUrlUtil {
      */
     public boolean isConfigured() {
         return projectId != null && !projectId.trim().isEmpty() &&
-               bucketName != null && !bucketName.trim().isEmpty();
+                bucketName != null && !bucketName.trim().isEmpty() &&
+                credentialsPath != null && !credentialsPath.trim().isEmpty();
     }
-    
+
     /**
      * Obtém o Storage client (lazy initialization)
      *
@@ -93,14 +98,16 @@ public class GcpPresignedUrlUtil {
             if (!isConfigured()) {
                 throw new IllegalStateException("Google Cloud Storage não está configurado corretamente");
             }
-            
-            GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-            
-            storage = StorageOptions.newBuilder()
-                    .setProjectId(projectId)
-                    .setCredentials(credentials)
-                    .build()
-                    .getService();
+
+            try (FileInputStream credentialsStream = new FileInputStream(credentialsPath)) {
+                GoogleCredentials credentials = GoogleCredentials.fromStream(credentialsStream);
+
+                storage = StorageOptions.newBuilder()
+                        .setProjectId(projectId)
+                        .setCredentials(credentials)
+                        .build()
+                        .getService();
+            }
         }
         return storage;
     }
