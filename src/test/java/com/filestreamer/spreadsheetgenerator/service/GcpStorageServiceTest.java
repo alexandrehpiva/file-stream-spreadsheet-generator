@@ -1,21 +1,20 @@
 package com.filestreamer.spreadsheetgenerator.service;
 
-import com.filestreamer.spreadsheetgenerator.dto.GcpFileInfoDto;
 import com.filestreamer.spreadsheetgenerator.dto.PresignedUrlResponseDto;
 import com.filestreamer.spreadsheetgenerator.util.GcpPresignedUrlUtil;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.Instant;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,6 +32,15 @@ class GcpStorageServiceTest {
 
     @Mock
     private Blob blob;
+
+    @Mock
+    private GoogleCredentials googleCredentials;
+
+    @Mock
+    private StorageOptions storageOptions;
+
+    @Mock
+    private StorageOptions.Builder storageOptionsBuilder;
 
     private GcpStorageService gcpStorageService;
 
@@ -69,8 +77,33 @@ class GcpStorageServiceTest {
 
         when(gcpPresignedUrlUtil.generatePresignedDownloadUrl(filePath)).thenReturn(presignedUrl);
 
-        // When & Then
-        assertThrows(RuntimeException.class, () -> gcpStorageService.generatePresignedUrl(filePath));
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.get(any(BlobId.class))).thenReturn(blob);
+
+            // When
+            PresignedUrlResponseDto result = gcpStorageService.generatePresignedUrl(filePath);
+
+            // Then
+            assertNotNull(result);
+            assertEquals(filePath, result.getFilePath());
+            assertEquals(presignedUrl, result.getPresignedUrl());
+            assertTrue(result.getSuccess());
+            assertNull(result.getErrorMessage());
+            assertEquals(1L, result.getDurationHours());
+            assertNotNull(result.getExpiresAt());
+            
+            verify(gcpPresignedUrlUtil).generatePresignedDownloadUrl(filePath);
+        }
     }
 
     @Test
@@ -79,8 +112,29 @@ class GcpStorageServiceTest {
         // Given
         String filePath = "exports/non-existent-file.csv";
 
-        // When & Then
-        assertThrows(RuntimeException.class, () -> gcpStorageService.generatePresignedUrl(filePath));
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.get(any(BlobId.class))).thenReturn(null);
+
+            // When
+            PresignedUrlResponseDto result = gcpStorageService.generatePresignedUrl(filePath);
+
+            // Then
+            assertNotNull(result);
+            assertEquals(filePath, result.getFilePath());
+            assertNull(result.getPresignedUrl());
+            assertFalse(result.getSuccess());
+            assertEquals("Arquivo não encontrado no bucket", result.getErrorMessage());
+        }
     }
 
     @Test
@@ -105,8 +159,25 @@ class GcpStorageServiceTest {
         // Given
         String filePath = "exports/test-file.csv";
 
-        // When & Then
-        assertThrows(RuntimeException.class, () -> gcpStorageService.fileExists(filePath));
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.get(any(BlobId.class))).thenReturn(blob);
+
+            // When
+            boolean exists = gcpStorageService.fileExists(filePath);
+
+            // Then
+            assertTrue(exists);
+        }
     }
 
     @Test
@@ -115,8 +186,25 @@ class GcpStorageServiceTest {
         // Given
         String filePath = "exports/non-existent-file.csv";
 
-        // When & Then
-        assertThrows(RuntimeException.class, () -> gcpStorageService.fileExists(filePath));
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.get(any(BlobId.class))).thenReturn(null);
+
+            // When
+            boolean exists = gcpStorageService.fileExists(filePath);
+
+            // Then
+            assertFalse(exists);
+        }
     }
 
     @Test
@@ -131,5 +219,57 @@ class GcpStorageServiceTest {
 
         // Then
         assertFalse(exists);
+    }
+
+    @Test
+    @DisplayName("Deve lidar com exceção durante listagem de arquivos")
+    void shouldHandleExceptionDuringListFiles() {
+        // Given
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.list(anyString())).thenThrow(new RuntimeException("Erro de conexão"));
+
+            // When & Then
+            assertThrows(RuntimeException.class, () -> gcpStorageService.listFiles());
+        }
+    }
+
+    @Test
+    @DisplayName("Deve lidar com exceção durante geração de URL pré-assinada")
+    void shouldHandleExceptionDuringPresignedUrlGeneration() {
+        // Given
+        String filePath = "exports/test-file.csv";
+        when(gcpPresignedUrlUtil.generatePresignedDownloadUrl(filePath)).thenThrow(new RuntimeException("Erro de autenticação"));
+
+        try (MockedStatic<GoogleCredentials> credentialsMock = mockStatic(GoogleCredentials.class);
+             MockedStatic<StorageOptions> storageOptionsMock = mockStatic(StorageOptions.class)) {
+            
+            credentialsMock.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
+            storageOptionsMock.when(StorageOptions::newBuilder).thenReturn(storageOptionsBuilder);
+            
+            when(storageOptionsBuilder.setProjectId("test-project")).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.setCredentials(googleCredentials)).thenReturn(storageOptionsBuilder);
+            when(storageOptionsBuilder.build()).thenReturn(storageOptions);
+            when(storageOptions.getService()).thenReturn(storage);
+            
+            when(storage.get(any(BlobId.class))).thenReturn(blob);
+
+            // When
+            PresignedUrlResponseDto result = gcpStorageService.generatePresignedUrl(filePath);
+
+            // Then
+            assertNotNull(result);
+            assertFalse(result.getSuccess());
+            assertTrue(result.getErrorMessage().contains("Erro de autenticação"));
+        }
     }
 } 
